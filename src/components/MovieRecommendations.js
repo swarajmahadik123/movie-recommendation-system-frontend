@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import { useMovieContext } from "../../context/MovieContext";
 
 const tmdbBearerToken =
@@ -13,6 +13,8 @@ export default function MovieRecommendations() {
   const [title, setTitle] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
   const router = useRouter();
 
   const { movieRecommendations, setMovieRecommendations } = useMovieContext();
@@ -22,6 +24,17 @@ export default function MovieRecommendations() {
       fetchInitialRecommendations();
     }
   }, []);
+
+  useEffect(() => {
+    if (errorMessage) {
+      setShowToast(true);
+      const timer = setTimeout(() => {
+        setShowToast(false);
+        setErrorMessage("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   const fetchInitialRecommendations = async () => {
     setIsLoading(true);
@@ -53,6 +66,9 @@ export default function MovieRecommendations() {
       setMovieRecommendations(detailedMovies);
     } catch (error) {
       console.error("Error fetching initial recommendations:", error);
+      setErrorMessage(
+        "Failed to fetch initial recommendations. Please try again later."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -72,17 +88,48 @@ export default function MovieRecommendations() {
       setSuggestions(response.data.results.slice(0, 5));
     } catch (error) {
       console.error("Error fetching suggestions:", error);
+      setErrorMessage("Failed to fetch suggestions. Please try again.");
     }
   };
 
   const fetchRecommendations = async () => {
+    if (!title.trim()) {
+      setErrorMessage("Please enter a movie title.");
+      return;
+    }
+
     setIsLoading(true);
+    setErrorMessage(""); // Reset error message on new search
+    setSuggestions([]); // Clear the suggestions list
     try {
       const response = await axios.get(`/api/recommend?title=${title}`);
+
+      // Log the response data to see its structure
+      console.log("Recommendations response:", response.data);
+
+      // Check if the response has an error
+      if (response.status === 404) {
+        setErrorMessage(response.data.error || "Movie not found.");
+        setMovieRecommendations([]);
+        return;
+      }
+
       const data = response.data;
-      await fetchMovieDetails(data);
+
+      // Only call fetchMovieDetails if data is an array
+      if (Array.isArray(data) && data.length > 0) {
+        await fetchMovieDetails(data);
+      } else {
+        setErrorMessage("No recommendations found for this movie.");
+        setMovieRecommendations([]);
+      }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
+      setErrorMessage(
+        error.response?.data?.error ||
+          "An error occurred while fetching recommendations."
+      );
+      setMovieRecommendations([]);
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +154,7 @@ export default function MovieRecommendations() {
       setMovieRecommendations(resolvedDetails);
     } catch (error) {
       console.error("Error fetching movie details:", error);
+      setErrorMessage("Failed to fetch movie details. Please try again.");
     }
   };
 
@@ -126,32 +174,30 @@ export default function MovieRecommendations() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <h1 className="text-4xl font-bold mb-8 text-center">
+    <div className="min-h-screen bg-black text-white p-4 sm:p-8 relative">
+      <h1 className="text-3xl sm:text-4xl font-bold mb-6 sm:mb-8 text-center">
         Movie Recommendations
       </h1>
-      <div className="max-w-xl mx-auto mb-8">
-        <div className="relative">
+      <div className="max-w-xl mx-auto mb-6 sm:mb-8">
+        <div className="relative flex flex-col sm:flex-row items-center">
           <input
             type="text"
             value={title}
             onChange={handleInputChange}
             placeholder="Enter movie title"
-            className="w-full px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:border-red-500"
+            className="w-full px-4 py-2 mb-2 sm:mb-0 bg-gray-800 text-white border border-gray-700 rounded-md sm:rounded-r-none focus:outline-none focus:border-red-500"
           />
           <button
             onClick={fetchRecommendations}
-            className="absolute right-0 top-0 h-full px-4 bg-red-600 hover:bg-red-700 text-white rounded-r-md flex items-center justify-center"
+            className="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md sm:rounded-l-none flex items-center justify-center"
             disabled={isLoading}
           >
             {isLoading ? (
-              <Loader2 className="animate-spin h-5 w-5" />
+              <Loader2 className="animate-spin h-5 w-5 mr-2" />
             ) : (
-              <Search className="h-5 w-5" />
+              <Search className="h-5 w-5 mr-2" />
             )}
-            <span className="ml-2">
-              {isLoading ? "Searching..." : "Search"}
-            </span>
+            <span>{isLoading ? "Searching..." : "Search"}</span>
           </button>
         </div>
         {suggestions.length > 0 && (
@@ -168,27 +214,48 @@ export default function MovieRecommendations() {
           </ul>
         )}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {movieRecommendations.map((movie) => (
-          <div
-            key={movie.details.id}
-            className="bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-200 cursor-pointer"
-            onClick={() => router.push(`/movie/${movie.details.id}`)}
-          >
-            <img
-              src={`https://image.tmdb.org/t/p/w500${movie.details.poster_path}`}
-              alt={movie.title}
-              className="w-full h-auto"
-            />
-            <div className="p-4">
-              <h3 className="text-lg font-semibold truncate">{movie.title}</h3>
-              <p className="text-sm text-gray-400">
-                {movie.details.release_date.split("-")[0]}
-              </p>
+      {movieRecommendations.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {movieRecommendations.map((movie, index) => (
+            <div
+              key={index}
+              className="bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-200 cursor-pointer"
+              onClick={() => router.push(`/movie/${movie.details.id}`)}
+            >
+              <img
+                src={`https://image.tmdb.org/t/p/w500${movie.details.poster_path}`}
+                alt={movie.title}
+                className="w-full h-auto"
+              />
+              <div className="p-4">
+                <h3 className="text-lg font-semibold truncate">
+                  {movie.title}
+                </h3>
+                <p className="text-sm text-gray-400">
+                  {movie.details.release_date.split("-")[0]}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        !isLoading && (
+          <p className="text-center text-xl mt-8">
+            No recommendations to display. Try searching for a movie!
+          </p>
+        )
+      )}
+      {showToast && (
+        <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded-md shadow-lg flex items-center">
+          <span>{errorMessage}</span>
+          <button
+            onClick={() => setShowToast(false)}
+            className="ml-2 focus:outline-none"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
