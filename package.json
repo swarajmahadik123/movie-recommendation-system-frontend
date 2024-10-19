@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "axios": "^0.21.4",
+    "dotenv": "^16.4.5",
     "lucide-react": "^0.453.0",
     "next": "latest",
     "react": "latest",

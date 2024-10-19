@@ -6,9 +6,6 @@ import axios from "axios";
 import { Loader2, Search, X } from "lucide-react";
 import { useMovieContext } from "../../context/MovieContext";
 
-const tmdbBearerToken =
-  "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0MTE2M2NkMmIwZTgzOGIwNTQyYTU0M2FlZTFhNjY4YSIsIm5iZiI6MTcyOTMzNjQzNC43OTUzNjUsInN1YiI6IjY3MTM5MTU1ZDViNzkyNmU5NDZmYWQzNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.45mcsu-gZ-1GidrjLJacOvieuFjZlwk3g2JB56nAtcI";
-
 export default function MovieRecommendations() {
   const [title, setTitle] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -18,6 +15,9 @@ export default function MovieRecommendations() {
   const router = useRouter();
 
   const { movieRecommendations, setMovieRecommendations } = useMovieContext();
+
+  const tmdbBearerToken = process.env.NEXT_PUBLIC_TMDB_BEARER_TOKEN;
+  const tmdbApiBaseUrl = process.env.NEXT_PUBLIC_TMDB_API_BASE_URL;
 
   useEffect(() => {
     if (movieRecommendations.length === 0) {
@@ -40,7 +40,7 @@ export default function MovieRecommendations() {
     setIsLoading(true);
     try {
       const response = await axios.get(
-        "https://api.themoviedb.org/3/movie/top_rated?language=en-US&page=1",
+        `${tmdbApiBaseUrl}/movie/top_rated?language=en-US&page=1`,
         {
           headers: {
             accept: "application/json",
@@ -52,7 +52,7 @@ export default function MovieRecommendations() {
       const detailedMovies = await Promise.all(
         topMovies.map(async (movie) => {
           const detailsResponse = await axios.get(
-            `https://api.themoviedb.org/3/movie/${movie.id}?language=en-US`,
+            `${tmdbApiBaseUrl}/movie/${movie.id}?language=en-US`,
             {
               headers: {
                 accept: "application/json",
@@ -77,7 +77,7 @@ export default function MovieRecommendations() {
   const fetchSuggestions = async (searchText) => {
     try {
       const response = await axios.get(
-        `https://api.themoviedb.org/3/search/movie?query=${searchText}&language=en-US&page=1`,
+        `${tmdbApiBaseUrl}/search/movie?query=${searchText}&language=en-US&page=1`,
         {
           headers: {
             accept: "application/json",
@@ -107,7 +107,6 @@ export default function MovieRecommendations() {
       // Log the response data to see its structure
       console.log("Recommendations response:", response.data);
 
-      // Check if the response has an error
       if (response.status === 404) {
         setErrorMessage(response.data.error || "Movie not found.");
         setMovieRecommendations([]);
@@ -116,7 +115,6 @@ export default function MovieRecommendations() {
 
       const data = response.data;
 
-      // Only call fetchMovieDetails if data is an array
       if (Array.isArray(data) && data.length > 0) {
         await fetchMovieDetails(data);
       } else {
@@ -140,7 +138,7 @@ export default function MovieRecommendations() {
       const detailsPromises = movies.map(async (movie) => {
         const [movieTitle, movieId] = movie;
         const response = await axios.get(
-          `https://api.themoviedb.org/3/movie/${movieId}?language=en-US`,
+          `${tmdbApiBaseUrl}/movie/${movieId}?language=en-US`,
           {
             headers: {
               accept: "application/json",
@@ -232,27 +230,23 @@ export default function MovieRecommendations() {
                   {movie.title}
                 </h3>
                 <p className="text-sm text-gray-400">
-                  {movie.details.release_date.split("-")[0]}
+                  {movie.details.release_date}
                 </p>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        !isLoading && (
-          <p className="text-center text-xl mt-8">
-            No recommendations to display. Try searching for a movie!
-          </p>
-        )
+        <p className="text-center mt-4 text-red-400">{errorMessage}</p>
       )}
       {showToast && (
-        <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded-md shadow-lg flex items-center">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-lg">
           <span>{errorMessage}</span>
           <button
             onClick={() => setShowToast(false)}
-            className="ml-2 focus:outline-none"
+            className="absolute top-0 right-0 m-2"
           >
-            <X size={18} />
+            <X className="h-5 w-5" />
           </button>
         </div>
       )}
