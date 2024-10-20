@@ -12,13 +12,14 @@ const Footer = () => {
     <footer className="bg-gray-900 text-white py-8 ">
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
+          <h3 className="text-xl font-semibold">Subject</h3>
+          <p className="text-red-500 text-lg">
+            Data Mining and Warehousing Lab(PBL III)
+          </p>
+        </div>
+        <div className="text-center mb-8">
           <h2 className="text-2xl font-bold mb-2">Our Team</h2>
           <div className="w-16 h-1 bg-red-600 mx-auto"></div>
-        </div>
-
-        <div className="text-center mb-8">
-          <h3 className="text-xl font-semibold">Subject</h3>
-          <p className="text-red-500 text-lg">Data Mining and Warehousing</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">

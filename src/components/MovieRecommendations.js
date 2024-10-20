@@ -48,7 +48,7 @@ export default function MovieRecommendations() {
           },
         }
       );
-      const topMovies = response.data.results.slice(0, 5);
+      const topMovies = response.data.results.slice(0, 20);
       const detailedMovies = await Promise.all(
         topMovies.map(async (movie) => {
           const detailsResponse = await axios.get(
